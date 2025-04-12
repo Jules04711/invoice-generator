@@ -2,6 +2,10 @@
 
 A Streamlit web application that allows users to easily create professional PDF invoices for clients.
 
+## Demo
+
+https://github.com/user-attachments/assets/f8170bf9-a154-42fc-8aff-c8b44ea1cc11
+
 ## Features
 
 - Create customized invoices with your company information
@@ -46,6 +50,6 @@ The application will open in your default web browser. Follow these steps to cre
 - Pillow
 - Requests
 
-## License
+## MIT License
 
 This project is open source and available for personal and commercial use. 
