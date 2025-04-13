@@ -51,7 +51,7 @@ class InvoiceGenerator:
                 self.logo_path = None
     
     def generate_invoice(self, invoice_number, client_name, client_address, client_email, 
-                         items, notes=None, tax_rate=6.0, discount=0.0):
+                         items, notes=None, tax_rate=6.0, discount=0.0, invoice_date=None, due_date=None):
         """
         Generate a PDF invoice
         
@@ -64,6 +64,8 @@ class InvoiceGenerator:
         - notes: Additional notes to include on the invoice
         - tax_rate: Tax rate percentage
         - discount: Discount percentage
+        - invoice_date: Invoice date (datetime.date object)
+        - due_date: Due date (datetime.date object)
         
         Returns:
         - PDF bytes
@@ -109,8 +111,15 @@ class InvoiceGenerator:
         pdf.set_font('helvetica', 'B', 10)
         
         # Current date and due date (30 days from now)
-        current_date = datetime.now().strftime('%Y-%m-%d')
-        due_date = (datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d')
+        if invoice_date:
+            current_date = invoice_date.strftime('%Y-%m-%d')
+        else:
+            current_date = datetime.now().strftime('%Y-%m-%d')
+        
+        if due_date:
+            due_date_str = due_date.strftime('%Y-%m-%d')
+        else:
+            due_date_str = (datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d')
         
         pdf.ln(5)
         pdf.cell(30, 7, 'Invoice #:', 0)
@@ -125,7 +134,7 @@ class InvoiceGenerator:
         pdf.set_font('helvetica', 'B', 10)
         pdf.cell(30, 7, 'Due Date:', 0)
         pdf.set_font('helvetica', '', 10)
-        pdf.cell(0, 7, due_date, ln=True)
+        pdf.cell(0, 7, due_date_str, ln=True)
         
         # Client information
         pdf.ln(10)
@@ -387,11 +396,22 @@ with tabs[3]:
     tax_rate = st.number_input("Tax Rate (%)", value=st.session_state.tax_rate, min_value=0.0, step=0.1)
     discount = st.number_input("Discount (%)", value=st.session_state.discount, min_value=0.0, max_value=100.0, step=0.1)
     
+    # Add date fields
+    if 'invoice_date' not in st.session_state:
+        st.session_state.invoice_date = datetime.now().date()
+    if 'due_date' not in st.session_state:
+        st.session_state.due_date = (datetime.now() + timedelta(days=30)).date()
+        
+    invoice_date = st.date_input("Invoice Date", value=st.session_state.invoice_date)
+    due_date = st.date_input("Due Date", value=st.session_state.due_date)
+    
     # Save to session state
     if st.button("Save Notes & Options"):
         st.session_state.notes = notes
         st.session_state.tax_rate = tax_rate
         st.session_state.discount = discount
+        st.session_state.invoice_date = invoice_date
+        st.session_state.due_date = due_date
         st.success("Notes and options saved!")
 
 # Preview Tab
@@ -425,7 +445,9 @@ with tabs[4]:
                 items=updated_items,  # Pass the updated items explicitly
                 notes=st.session_state.notes,
                 tax_rate=float(st.session_state.tax_rate),
-                discount=float(st.session_state.discount)
+                discount=float(st.session_state.discount),
+                invoice_date=st.session_state.invoice_date,
+                due_date=st.session_state.due_date
             )
             
             # Create download link
