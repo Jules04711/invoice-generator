@@ -23,7 +23,7 @@ class InvoiceGenerator:
         
         # If custom logo is provided, use it
         if logo is not None:
-           try:
+            try:
                 # Convert the uploaded image to PNG format
                 image = Image.open(BytesIO(logo.getvalue()))
                 # Convert to RGB if needed (handling RGBA or other formats)
