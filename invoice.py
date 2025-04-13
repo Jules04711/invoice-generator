@@ -51,7 +51,8 @@ class InvoiceGenerator:
                 self.logo_path = None
     
     def generate_invoice(self, invoice_number, client_name, client_address, client_email, 
-                         items, notes=None, tax_rate=6.0, discount=0.0, invoice_date=None, due_date=None):
+                         items, notes=None, tax_rate=6.0, discount=0.0, invoice_date=None, due_date=None,
+                         services_heading="Services", column_names=None):
         """
         Generate a PDF invoice
         
@@ -66,6 +67,8 @@ class InvoiceGenerator:
         - discount: Discount percentage
         - invoice_date: Invoice date (datetime.date object)
         - due_date: Due date (datetime.date object)
+        - services_heading: Custom heading for the services section
+        - column_names: Dictionary of custom column names {'service_item', 'description', 'hours', 'rate', 'amount'}
         
         Returns:
         - PDF bytes
@@ -73,6 +76,16 @@ class InvoiceGenerator:
         # Create PDF object
         pdf = FPDF(orientation='P', unit='mm', format='A4')
         pdf.add_page()
+        
+        # Set default column names if not provided
+        if column_names is None:
+            column_names = {
+                'service_item': 'Service Item',
+                'description': 'Description',
+                'hours': 'Hours',
+                'rate': 'Rate ($)',
+                'amount': 'Amount ($)'
+            }
         
         # Set font
         pdf.set_font('helvetica', '', 10)
@@ -153,16 +166,16 @@ class InvoiceGenerator:
         # Services table
         pdf.ln(10)
         pdf.set_font('helvetica', 'B', 12)
-        pdf.cell(0, 7, 'Services', ln=True)
+        pdf.cell(0, 7, services_heading, ln=True)
         
         # Table header
         pdf.set_fill_color(*light_gray)
         pdf.set_font('helvetica', 'B', 10)
-        pdf.cell(25, 7, 'Service Item', 1, 0, 'L', True)
-        pdf.cell(65, 7, 'Description', 1, 0, 'L', True)
-        pdf.cell(30, 7, 'Hours', 1, 0, 'R', True)
-        pdf.cell(30, 7, 'Rate ($)', 1, 0, 'R', True)
-        pdf.cell(40, 7, 'Amount ($)', 1, 1, 'R', True)
+        pdf.cell(25, 7, column_names['service_item'], 1, 0, 'L', True)
+        pdf.cell(65, 7, column_names['description'], 1, 0, 'L', True)
+        pdf.cell(30, 7, column_names['hours'], 1, 0, 'R', True)
+        pdf.cell(30, 7, column_names['rate'], 1, 0, 'R', True)
+        pdf.cell(40, 7, column_names['amount'], 1, 1, 'R', True)
         
         # Table content
         pdf.set_font('helvetica', '', 10)
@@ -171,16 +184,26 @@ class InvoiceGenerator:
         for item in items:
             service_item = item.get('service_item', '')
             description = item['description']
-            hours = float(item['hours'])
-            rate = float(item['rate'])
-            amount = hours * rate
+            
+            # Check if it's a fixed amount item or hours/rate calculation
+            if item.get('amount') is not None:
+                amount = float(item['amount'])
+                hours_display = 'N/A'
+                rate_display = 'N/A'
+            else:
+                hours = float(item['hours'])
+                rate = float(item['rate'])
+                amount = hours * rate
+                hours_display = f"{hours:.2f}"
+                rate_display = f"{rate:.2f}"
+                
             subtotal += amount
             
             pdf.cell(25, 7, service_item, 1)
             pdf.cell(65, 7, description, 1)
-            pdf.cell(30, 7, f"{hours:.2f}", 1, 0, 'R')
-            pdf.cell(30, 7, f"{rate:.2f}", 1, 0, 'R')
-            pdf.cell(40, 7, f"{amount:.2f}", 1, 1, 'R')
+            pdf.cell(30, 7, hours_display, 1, 0, 'R')
+            pdf.cell(30, 7, rate_display, 1, 0, 'R')
+            pdf.cell(40, 7, f"{amount:,.2f}", 1, 1, 'R')
         
         # Calculate tax and total
         tax_rate = float(tax_rate)
@@ -196,26 +219,26 @@ class InvoiceGenerator:
         pdf.set_font('helvetica', 'B', 10)
         pdf.cell(30, 7, 'Subtotal:', 0, 0, 'R')
         pdf.set_font('helvetica', '', 10)
-        pdf.cell(40, 7, f"${subtotal:.2f}", 0, 1, 'R')
+        pdf.cell(40, 7, f"${subtotal:,.2f}", 0, 1, 'R')
         
         if discount_rate > 0:
             pdf.set_x(120)  # Position closer to the right margin
             pdf.set_font('helvetica', 'B', 10)
             pdf.cell(30, 7, f'Discount ({discount_rate}%):', 0, 0, 'R')
             pdf.set_font('helvetica', '', 10)
-            pdf.cell(40, 7, f"-${discount_amount:.2f}", 0, 1, 'R')
+            pdf.cell(40, 7, f"-${discount_amount:,.2f}", 0, 1, 'R')
             
             pdf.set_x(120)  # Position closer to the right margin
             pdf.set_font('helvetica', 'B', 10)
             pdf.cell(30, 7, 'Subtotal after discount:', 0, 0, 'R')
             pdf.set_font('helvetica', '', 10)
-            pdf.cell(40, 7, f"${discounted_subtotal:.2f}", 0, 1, 'R')
+            pdf.cell(40, 7, f"${discounted_subtotal:,.2f}", 0, 1, 'R')
         
         pdf.set_x(120)  # Position closer to the right margin
         pdf.set_font('helvetica', 'B', 10)
         pdf.cell(30, 7, f'Tax ({tax_rate}%):', 0, 0, 'R')
         pdf.set_font('helvetica', '', 10)
-        pdf.cell(40, 7, f"${tax:.2f}", 0, 1, 'R')
+        pdf.cell(40, 7, f"${tax:,.2f}", 0, 1, 'R')
         
         pdf.set_draw_color(200, 200, 200)
         pdf.line(120, pdf.get_y(), 190, pdf.get_y())
@@ -223,7 +246,7 @@ class InvoiceGenerator:
         pdf.set_x(120)  # Position closer to the right margin
         pdf.set_font('helvetica', 'B', 12)
         pdf.cell(30, 10, 'Total:', 0, 0, 'R')
-        pdf.cell(40, 10, f"${total:.2f}", 0, 1, 'R')
+        pdf.cell(40, 10, f"${total:,.2f}", 0, 1, 'R')
         
         # Notes
         if notes:
@@ -280,9 +303,9 @@ if 'client_email' not in st.session_state:
     st.session_state.client_email = "billing@acmecorp.com"
 if 'items' not in st.session_state:
     st.session_state['items'] = [
-        {"service_item": "AI-001", "description": "AI Workflow Development", "hours": 12, "rate": 150},
-        {"service_item": "LLM-001", "description": "LLM Systems Integration", "hours": 8, "rate": 175},
-        {"service_item": "CONS-001", "description": "Implementation Consulting", "hours": 8, "rate": 175}
+        {"service_item": "AI-001", "description": "AI Workflow Development", "hours": 12, "rate": 150, "amount": None},
+        {"service_item": "LLM-001", "description": "LLM Systems Integration", "hours": 8, "rate": 175, "amount": None},
+        {"service_item": "CONS-001", "description": "Implementation Consulting", "hours": 8, "rate": 175, "amount": None}
     ]
 if 'notes' not in st.session_state:
     st.session_state.notes = "Payment is due within 30 days. Please make checks payable to ABC123 INC"
@@ -290,9 +313,40 @@ if 'tax_rate' not in st.session_state:
     st.session_state.tax_rate = 6.0
 if 'discount' not in st.session_state:
     st.session_state.discount = 0.0
+if 'service_item_col' not in st.session_state:
+    st.session_state.service_item_col = "Service Item"
+if 'description_col' not in st.session_state:
+    st.session_state.description_col = "Description"
+if 'hours_col' not in st.session_state:
+    st.session_state.hours_col = "Hours"
+if 'rate_col' not in st.session_state:
+    st.session_state.rate_col = "Rate ($)"
+if 'amount_col' not in st.session_state:
+    st.session_state.amount_col = "Amount ($)"
+if 'services_heading' not in st.session_state:
+    st.session_state.services_heading = "Services"
+
+# Function to update column name in session state
+def update_service_heading():
+    st.session_state.services_heading = st.session_state.services_heading_input
+
+def update_service_item_col():
+    st.session_state.service_item_col = st.session_state.service_item_col_input
+
+def update_description_col():
+    st.session_state.description_col = st.session_state.description_col_input
+    
+def update_hours_col():
+    st.session_state.hours_col = st.session_state.hours_col_input
+    
+def update_rate_col():
+    st.session_state.rate_col = st.session_state.rate_col_input
+    
+def update_amount_col():
+    st.session_state.amount_col = st.session_state.amount_col_input
 
 # Create tabs for company info, client info, items, and preview
-tabs = st.tabs(["Company Info", "Client Info", "Invoice Items", "Notes & Options", "Preview"])
+tabs = st.tabs(["Company Info", "Client Info", "Options and Notes", "Invoice Items", "Generate Invoice"])
 
 # Company Info Tab
 with tabs[0]:
@@ -336,42 +390,84 @@ with tabs[1]:
         st.success("Client information saved!")
 
 # Invoice Items Tab
-with tabs[2]:
+with tabs[3]:
     st.header("Invoice Items")
     
     # Reset items if it's not a list
     if not isinstance(st.session_state.get('items'), list):
         st.session_state['items'] = [
-            {"service_item": "AI-001", "description": "AI Workflow Development", "hours": 12, "rate": 150},
-            {"service_item": "LLM-001", "description": "LLM Systems Integration", "hours": 8, "rate": 175},
-            {"service_item": "CONS-001", "description": "Implementation Consulting", "hours": 8, "rate": 175}
+            {"service_item": "AI-001", "description": "AI Workflow Development", "hours": 12, "rate": 150, "amount": None},
+            {"service_item": "LLM-001", "description": "LLM Systems Integration", "hours": 8, "rate": 175, "amount": None},
+            {"service_item": "CONS-001", "description": "Implementation Consulting", "hours": 8, "rate": 175, "amount": None}
         ]
     
     # Get items from session state
     items = st.session_state['items']
     
+    # Get custom column names from session state
+    service_item_label = st.session_state.get('service_item_col', 'Service Item')
+    description_label = st.session_state.get('description_col', 'Description')
+    hours_label = st.session_state.get('hours_col', 'Hours')
+    rate_label = st.session_state.get('rate_col', 'Rate ($)')
+    amount_label = st.session_state.get('amount_col', 'Amount ($)')
+    
     # Display existing items
     for i, item in enumerate(items):
+        st.write(f"**Item #{i+1}**")
+        
+        # Add a select box to choose between hours/rate or fixed amount - moved above fields
+        calc_method = "hours_rate"
+        if item.get("amount") is not None and (item.get("hours") is None or item.get("rate") is None):
+            calc_method = "fixed_amount"
+        
+        calc_method = st.radio(f"Calculation method for item #{i+1}", 
+                               ["Hours & Rate", "Fixed Amount"], 
+                               index=0 if calc_method == "hours_rate" else 1,
+                               horizontal=True, key=f"calc_method_{i}")
+        
         cols = st.columns([1, 3, 1, 1, 1])
         with cols[0]:
-            st.text_input(f"Service Item #{i+1}", value=item.get("service_item", ""), key=f"service_{i}")
+            st.text_input(f"{service_item_label} #{i+1}", value=item.get("service_item", ""), key=f"service_{i}")
         with cols[1]:
-            st.text_input(f"Description #{i+1}", value=item["description"], key=f"desc_{i}")
-        with cols[2]:
-            st.number_input(f"Hours #{i+1}", value=float(item["hours"]), step=0.5, format="%.2f", key=f"hours_{i}")
-        with cols[3]:
-            st.number_input(f"Rate #{i+1}", value=float(item["rate"]), step=10.0, format="%.2f", key=f"rate_{i}")
-        with cols[4]:
-            if st.button("Remove", key=f"remove_{i}"):
-                items_copy = list(items)  # Create a copy
-                items_copy.pop(i)
-                st.session_state['items'] = items_copy
-                st.rerun()
+            st.text_input(f"{description_label} #{i+1}", value=item["description"], key=f"desc_{i}")
+        
+        # Display fields based on calculation method
+        if calc_method == "Hours & Rate":
+            with cols[2]:
+                st.number_input(f"{hours_label} #{i+1}", value=float(item.get("hours", 0)), step=0.5, format="%.2f", key=f"hours_{i}")
+            with cols[3]:
+                st.number_input(f"{rate_label} #{i+1}", value=float(item.get("rate", 0)), step=10.0, format="%.2f", key=f"rate_{i}")
+            with cols[4]:
+                # Display calculated amount (read-only)
+                hours = float(st.session_state.get(f"hours_{i}", 0))
+                rate = float(st.session_state.get(f"rate_{i}", 0))
+                calculated_amount = hours * rate
+                st.text_input(f"{amount_label} #{i+1}", value=f"${calculated_amount:,.2f}", disabled=True, key=f"calc_amount_{i}")
+        else:
+            # For fixed amount, disable hours and rate, but show amount field
+            with cols[2]:
+                st.text_input(f"{hours_label} #{i+1}", value="N/A", disabled=True)
+            with cols[3]:
+                st.text_input(f"{rate_label} #{i+1}", value="N/A", disabled=True)
+            with cols[4]:
+                # Fix the error by ensuring we have a valid default value
+                amount_value = 0.0
+                if item.get("amount") is not None:
+                    amount_value = float(item.get("amount"))
+                st.number_input(f"{amount_label} #{i+1}", value=amount_value, step=10.0, format="%.2f", key=f"amount_{i}")
+        
+        # Remove button with some spacing
+        if st.button("Remove Item", key=f"remove_{i}"):
+            items_copy = list(items)  # Create a copy
+            items_copy.pop(i)
+            st.session_state['items'] = items_copy
+            st.rerun()
+        st.markdown("---")  # Add a separator between items
     
     # Add new item button
     if st.button("Add New Item"):
         items_copy = list(items)  # Create a copy
-        items_copy.append({"service_item": "", "description": "", "hours": 1, "rate": 100})
+        items_copy.append({"service_item": "", "description": "", "hours": 1, "rate": 100, "amount": None})
         st.session_state['items'] = items_copy
         st.rerun()
     
@@ -379,19 +475,72 @@ with tabs[2]:
     if st.button("Save Items"):
         updated_items = []
         for i in range(len(items)):
-            updated_items.append({
-                "service_item": st.session_state[f"service_{i}"],
-                "description": st.session_state[f"desc_{i}"],
-                "hours": float(st.session_state[f"hours_{i}"]),
-                "rate": float(st.session_state[f"rate_{i}"]),
-            })
+            calc_method = st.session_state.get(f"calc_method_{i}")
+            if calc_method == "Hours & Rate":
+                updated_items.append({
+                    "service_item": st.session_state[f"service_{i}"],
+                    "description": st.session_state[f"desc_{i}"],
+                    "hours": float(st.session_state[f"hours_{i}"]),
+                    "rate": float(st.session_state[f"rate_{i}"]),
+                    "amount": None
+                })
+            else:
+                updated_items.append({
+                    "service_item": st.session_state[f"service_{i}"],
+                    "description": st.session_state[f"desc_{i}"],
+                    "hours": None,
+                    "rate": None,
+                    "amount": float(st.session_state[f"amount_{i}"])
+                })
         st.session_state['items'] = updated_items
         st.success("Invoice items saved!")
 
-# Notes & Options Tab
-with tabs[3]:
-    st.header("Notes and Options")
+# Options & Notes Tab
+with tabs[2]:
+    st.header("Options and Notes")
     
+    # Add column for custom headings and column names
+    st.subheader("Custom Invoice Table Labels")
+    
+    # Use a smaller column width for the section heading
+    col1, _ = st.columns([2, 6])  # Use 2/8 = 25% of the width
+    with col1:
+        services_heading = st.text_input("Section Heading", 
+                                       value=st.session_state.services_heading, 
+                                       key="services_heading_input",
+                                       on_change=update_service_heading)
+    
+    st.markdown("**Custom Column Names:**")
+    cols = st.columns(5)  # Create 5 equal columns for each input field
+    
+    with cols[0]:
+        service_item_col = st.text_input("Service Item", 
+                                       value=st.session_state.service_item_col,
+                                       key="service_item_col_input",
+                                       on_change=update_service_item_col)
+    with cols[1]:
+        description_col = st.text_input("Description", 
+                                      value=st.session_state.description_col,
+                                      key="description_col_input",
+                                      on_change=update_description_col)
+    with cols[2]:
+        hours_col = st.text_input("Hours", 
+                                value=st.session_state.hours_col,
+                                key="hours_col_input",
+                                on_change=update_hours_col)
+    with cols[3]:
+        rate_col = st.text_input("Rate", 
+                               value=st.session_state.rate_col,
+                               key="rate_col_input",
+                               on_change=update_rate_col)
+    with cols[4]:
+        amount_col = st.text_input("Amount", 
+                                 value=st.session_state.amount_col,
+                                 key="amount_col_input",
+                                 on_change=update_amount_col)
+    
+    st.markdown("---")
+    st.subheader("Invoice Notes and Settings")
     notes = st.text_area("Notes", value=st.session_state.notes, height=100)
     tax_rate = st.number_input("Tax Rate (%)", value=st.session_state.tax_rate, min_value=0.0, step=0.1)
     discount = st.number_input("Discount (%)", value=st.session_state.discount, min_value=0.0, max_value=100.0, step=0.1)
@@ -406,30 +555,57 @@ with tabs[3]:
     due_date = st.date_input("Due Date", value=st.session_state.due_date)
     
     # Save to session state
-    if st.button("Save Notes & Options"):
+    if st.button("Save Options & Notes"):
         st.session_state.notes = notes
         st.session_state.tax_rate = tax_rate
         st.session_state.discount = discount
         st.session_state.invoice_date = invoice_date
         st.session_state.due_date = due_date
-        st.success("Notes and options saved!")
+        # Save custom headings and column names
+        st.session_state.services_heading = services_heading
+        st.session_state.service_item_col = service_item_col
+        st.session_state.description_col = description_col
+        st.session_state.hours_col = hours_col
+        st.session_state.rate_col = rate_col
+        st.session_state.amount_col = amount_col
+        st.success("Options and notes saved!")
 
 # Preview Tab
 with tabs[4]:
-    st.header("Invoice Preview & Download")
+    st.header("Invoice Generation")
     
-    if st.button("Generate Invoice"):
+    if st.button("Generate and Download Invoice"):
         try:
             # Update items with the latest values
             updated_items = []
             items = st.session_state['items']
             for i in range(len(items)):
-                updated_items.append({
-                    "service_item": st.session_state[f"service_{i}"],
-                    "description": st.session_state[f"desc_{i}"],
-                    "hours": float(st.session_state[f"hours_{i}"]),
-                    "rate": float(st.session_state[f"rate_{i}"]),
-                })
+                calc_method = st.session_state.get(f"calc_method_{i}")
+                if calc_method == "Hours & Rate":
+                    updated_items.append({
+                        "service_item": st.session_state[f"service_{i}"],
+                        "description": st.session_state[f"desc_{i}"],
+                        "hours": float(st.session_state[f"hours_{i}"]),
+                        "rate": float(st.session_state[f"rate_{i}"]),
+                        "amount": None
+                    })
+                else:
+                    updated_items.append({
+                        "service_item": st.session_state[f"service_{i}"],
+                        "description": st.session_state[f"desc_{i}"],
+                        "hours": None,
+                        "rate": None,
+                        "amount": float(st.session_state[f"amount_{i}"])
+                    })
+            
+            # Create custom column names dictionary
+            column_names = {
+                'service_item': st.session_state.get('service_item_col', 'Service Item'),
+                'description': st.session_state.get('description_col', 'Description'),
+                'hours': st.session_state.get('hours_col', 'Hours'),
+                'rate': st.session_state.get('rate_col', 'Rate ($)'),
+                'amount': st.session_state.get('amount_col', 'Amount ($)')
+            }
             
             generator = InvoiceGenerator(
                 st.session_state.company_name,
@@ -447,46 +623,30 @@ with tabs[4]:
                 tax_rate=float(st.session_state.tax_rate),
                 discount=float(st.session_state.discount),
                 invoice_date=st.session_state.invoice_date,
-                due_date=st.session_state.due_date
+                due_date=st.session_state.due_date,
+                services_heading=st.session_state.get('services_heading', 'Services'),
+                column_names=column_names
             )
             
             # Create download link
             download_link = create_download_link(pdf_bytes, filename=f"Invoice_{st.session_state.invoice_number}.pdf")
             st.markdown(download_link, unsafe_allow_html=True)
             
-            # Display PDF preview using Streamlit's native PDF display
-            st.subheader("PDF Preview")
-            st.write("If the preview doesn't appear below, use the download link above to view the invoice.")
-            
-            # Save PDF to a temporary file for display
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-                tmp_file.write(pdf_bytes)
-                tmp_file_path = tmp_file.name
-            
-            # Display the PDF using Streamlit's PDF display capability
-            with open(tmp_file_path, "rb") as f:
-                pdf_data = f.read()
-                st.download_button(
-                    label="View PDF",
-                    data=pdf_data,
-                    file_name=f"Invoice_{st.session_state.invoice_number}.pdf",
-                    mime="application/pdf"
-                )
+            # Display the PDF using a download button
+            st.download_button(
+                label="Download Invoice PDF",
+                data=pdf_bytes,
+                file_name=f"Invoice_{st.session_state.invoice_number}.pdf",
+                mime="application/pdf"
+            )
                 
-            # Also try to display inline if possible
+            # Display PDF inline
             try:
-                st.write("PDF Preview:")
                 base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
                 pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="800" type="application/pdf"></iframe>'
                 st.markdown(pdf_display, unsafe_allow_html=True)
             except Exception as e:
-                st.write(f"Could not display preview: {e}")
-                
-            # Clean up the temporary file
-            try:
-                os.unlink(tmp_file_path)
-            except:
-                pass
+                st.error(f"Could not display preview: {e}")
             
         except Exception as e:
             st.error(f"Error generating invoice: {str(e)}") 
