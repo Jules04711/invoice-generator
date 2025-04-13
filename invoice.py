@@ -23,9 +23,13 @@ class InvoiceGenerator:
         
         # If custom logo is provided, use it
         if logo is not None:
-            # Write the uploaded file content to the temporary file
-            with open(self.logo_path, "wb") as f:
-                f.write(logo.getvalue())
+           try:
+                # Convert the uploaded image to PNG format
+                image = Image.open(BytesIO(logo.getvalue()))
+                image.save(self.logo_path, format='PNG')
+            except Exception as e:
+                print(f"Error processing logo: {e}")
+                self.logo_path = None
         else:
             # Use default logo from the asset folder
             try:
