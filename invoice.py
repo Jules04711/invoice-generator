@@ -454,10 +454,39 @@ with tabs[4]:
             download_link = create_download_link(pdf_bytes, filename=f"Invoice_{st.session_state.invoice_number}.pdf")
             st.markdown(download_link, unsafe_allow_html=True)
             
-            # Display PDF preview (using base64 encoding)
-            base64_pdf = base64.b64encode(pdf_bytes).decode('latin1')
-            pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="800" type="application/pdf"></iframe>'
-            st.markdown(pdf_display, unsafe_allow_html=True)
+            # Display PDF preview using Streamlit's native PDF display
+            st.subheader("PDF Preview")
+            st.write("If the preview doesn't appear below, use the download link above to view the invoice.")
+            
+            # Save PDF to a temporary file for display
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+                tmp_file.write(pdf_bytes)
+                tmp_file_path = tmp_file.name
+            
+            # Display the PDF using Streamlit's PDF display capability
+            with open(tmp_file_path, "rb") as f:
+                pdf_data = f.read()
+                st.download_button(
+                    label="View PDF",
+                    data=pdf_data,
+                    file_name=f"Invoice_{st.session_state.invoice_number}.pdf",
+                    mime="application/pdf"
+                )
+                
+            # Also try to display inline if possible
+            try:
+                st.write("PDF Preview:")
+                base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
+                pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="800" type="application/pdf"></iframe>'
+                st.markdown(pdf_display, unsafe_allow_html=True)
+            except Exception as e:
+                st.write(f"Could not display preview: {e}")
+                
+            # Clean up the temporary file
+            try:
+                os.unlink(tmp_file_path)
+            except:
+                pass
             
         except Exception as e:
             st.error(f"Error generating invoice: {str(e)}") 
