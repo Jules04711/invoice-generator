@@ -26,7 +26,15 @@ class InvoiceGenerator:
            try:
                 # Convert the uploaded image to PNG format
                 image = Image.open(BytesIO(logo.getvalue()))
-                image.save(self.logo_path, format='PNG')
+                # Convert to RGB if needed (handling RGBA or other formats)
+                if image.mode != 'RGB':
+                    image = image.convert('RGB')
+                # Save as PNG explicitly with proper format
+                image_bytes = BytesIO()
+                image.save(image_bytes, format='PNG')
+                # Save the processed image to the temporary file
+                with open(self.logo_path, "wb") as f:
+                    f.write(image_bytes.getvalue())
             except Exception as e:
                 print(f"Error processing logo: {e}")
                 self.logo_path = None
