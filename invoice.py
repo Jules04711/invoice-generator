@@ -10,6 +10,98 @@ import base64
 from io import BytesIO
 import requests
 from PIL import Image
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+def check_authentication():
+    """Check if user is authenticated"""
+    if 'authenticated' not in st.session_state:
+        st.session_state.authenticated = False
+    
+    if not st.session_state.authenticated:
+        # Add home button in upper right corner
+        col1, col2, col3 = st.columns([1, 1, 1])
+        with col3:
+            st.markdown("""
+            <div style='text-align: right; margin-bottom: 20px;'>
+                <a href='https://jmartin.consulting/' target='_blank' style='text-decoration: none;'>
+                    <button style='background-color: #000000; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px;'>
+                        Home
+                    </button>
+                </a>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.title("Invoice Generator Login")
+        
+        # Create login form at the top
+        # Create columns to control width and alignment
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col1:
+            with st.form("login_form"):
+                username = st.text_input("Username")
+                password = st.text_input("Password", type="password")
+                submit_button = st.form_submit_button("Login")
+            
+            if submit_button:
+                correct_username = os.getenv('USERNAME')
+                correct_password = os.getenv('PASSWORD')
+                if username == correct_username and password == correct_password:
+                    st.session_state.authenticated = True
+                    st.success("Login successful! Redirecting...")
+                    st.rerun()
+                else:
+                    st.error("Invalid username or password. Please try again.")
+        
+        st.markdown("---")
+        
+        # App information section
+        st.markdown("""
+            ### About Invoice Generator
+            **Invoice Generator** is a Streamlit web application that allows users to easily create professional PDF invoices for clients.
+            
+            ### Features
+            - Create customized invoices with your company information
+            - Add client details and multiple service items
+            - Customize tax rates and discounts
+            - Add custom notes to invoices
+            - Upload your company logo or use the default
+            - Preview and download generated invoices as PDF
+            
+            ### How to Use
+            Once logged in, follow these steps to create an invoice:
+            1. **Company Info tab**: Enter your company details and upload a logo if needed
+            2. **Client Info tab**: Add client information and invoice number
+            3. **Invoice Items tab**: Add service items with descriptions, hours, and rates
+            4. **Notes & Options tab**: Customize invoice notes, tax rate, and discount
+            5. **Generate Invoice tab**: Generate the invoice, preview it, and download as PDF
+            
+            ### Project Information
+            - **Repository**: [GitHub - Jules04711/invoice-generator](https://github.com/Jules04711/invoice-generator)
+            - **License**: MIT License - Open source and available for personal and commercial use
+            - **Requirements**: Python 3.7+, Streamlit, FPDF, Pillow, Requests
+            
+            ---
+            """)
+        
+        # Legal disclaimer footer
+        st.markdown("---")
+        st.markdown("""
+        <div style='text-align: center; font-size: 12px; color: #666; margin-top: 20px;'>
+            <p><strong>Legal Disclaimer:</strong> This application is provided for general informational purposes only. 
+            All information is provided in good faith; however, we make no representation or warranty of any kind regarding 
+            the accuracy, adequacy, validity, reliability, availability, or completeness of any information presented. 
+            Your use of this application is solely at your own risk. 
+            <a href='https://jmartin.consulting/disclaimer/' target='_blank'>View full legal disclaimer</a></p>
+            <p style='margin-top: 10px;'>© 2025 J. Martin Consulting LLC. All rights reserved.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.stop()
+    
+    return True
 
 class InvoiceGenerator:
     def __init__(self, company_name, company_address, logo=None):
@@ -284,9 +376,19 @@ def create_download_link(pdf_bytes, filename="invoice.pdf"):
 # Set page config
 st.set_page_config(page_title="Invoice Generator", layout="wide")
 
+# Check authentication first
+check_authentication()
+
 # App title and description
 st.title("Invoice Generator")
+
 st.write("Create an Invoice for your Clients:")
+
+# Add logout button in the main area
+if st.button("Logout"):
+    st.session_state.authenticated = False
+    st.success("Logged out successfully!")
+    st.rerun()
 
 # Initialize session state for all parameters
 if 'company_name' not in st.session_state:

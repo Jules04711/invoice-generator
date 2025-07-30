@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  invoice-generator:
+    image: jules04711/invoice-generator:latest
+    container_name: invoice-generator
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    environment:
+      - USERNAME=${USERNAME}
+      - PASSWORD=${PASSWORD}
+
+    volumes:
+      # Mount a volume for persistent data (optional)
+      - invoice_data:/app/data
+    networks:
+      - invoice-network
+
+volumes:
+  invoice_data:
+
+networks:
+  invoice-network:
+    driver: bridge 

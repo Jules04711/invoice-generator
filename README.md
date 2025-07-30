@@ -17,14 +17,30 @@ https://github.com/user-attachments/assets/f8170bf9-a154-42fc-8aff-c8b44ea1cc11
 
 ## Installation
 
-1. Clone this repository
-2. Install the required dependencies:
+1. Clone this repository:
+```bash
+git clone <repository-url>
+cd invoice-generator
+```
 
+2. Create and activate a virtual environment (recommended):
+```bash
+# Create virtual environment
+python3 -m venv venv
+
+# Activate virtual environment
+# On Linux/macOS:
+source venv/bin/activate
+# On Windows:
+# venv\Scripts\activate
+```
+
+3. Install the required dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Make sure you have an `asset` folder with a `logo.png` file for the default logo, or you can upload your own logo when using the app.
+4. Make sure you have an `asset` folder with a `logo.png` file for the default logo, or you can upload your own logo when using the app.
 
 ## Usage
 
