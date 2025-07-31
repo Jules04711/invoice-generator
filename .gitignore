@@ -12,3 +12,6 @@ docker-compose-local.yml
 # Shell scripts
 *.sh
 build-and-push.sh
+
+# Deployment documentation
+DEPLOYMENT.md
