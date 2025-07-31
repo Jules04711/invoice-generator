@@ -15,3 +15,9 @@ build-and-push.sh
 
 # Deployment documentation
 DEPLOYMENT.md
+
+# Development container
+.devcontainer/
+
+# Asset files
+asset/
